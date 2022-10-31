@@ -4,8 +4,8 @@ AC_INIT([volumeicon], [0.5.1], [http://www.softwarebakery.com/maato/volumeicon.h
 AM_INIT_AUTOMAKE
 
 # Check for programs
-AC_LANG([C])
-AC_PROG_CC
+AC_LANG([C++])
+AC_PROG_CXX
 
 # Check for gtk
 PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.0])

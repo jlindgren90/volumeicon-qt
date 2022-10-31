@@ -96,7 +96,8 @@ int asound_get_volume()
 	// Return the current volume value from [0-100]
 	long pmin, pmax, value;
 	snd_mixer_selem_get_playback_volume_range(m_elem, &pmin, &pmax);
-	snd_mixer_selem_get_playback_volume(m_elem, 0, &value);
+	snd_mixer_selem_get_playback_volume(
+	    m_elem, (snd_mixer_selem_channel_id_t)0, &value);
 	return 100 * (value - pmin) / (pmax - pmin);
 }
 
@@ -109,7 +110,8 @@ gboolean asound_get_mute()
 	gboolean mute = FALSE;
 	if(snd_mixer_selem_has_playback_switch(m_elem)) {
 		int pswitch;
-		snd_mixer_selem_get_playback_switch(m_elem, 0, &pswitch);
+		snd_mixer_selem_get_playback_switch(
+		    m_elem, (snd_mixer_selem_channel_id_t)0, &pswitch);
 		mute = pswitch ? FALSE : TRUE;
 	}
 	return mute;
@@ -207,8 +209,8 @@ gboolean asound_setup(const gchar *card, const gchar *channel,
 		if(count == 1) {
 			GIOChannel *giochannel = g_io_channel_unix_new(pfd.fd);
 			g_io_add_watch_full(giochannel, G_PRIORITY_DEFAULT,
-			                    G_IO_IN | G_IO_ERR, asound_poll_cb, NULL,
-			                    NULL);
+			                    (GIOCondition)(G_IO_IN | G_IO_ERR),
+			                    asound_poll_cb, NULL, NULL);
 		}
 	}
 
