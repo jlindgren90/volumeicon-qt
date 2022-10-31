@@ -21,9 +21,13 @@
 // with this program.  If not, see <http://www.gnu.org/licenses/>.
 //##############################################################################
 
+#include <QApplication>
+#include <QSystemTrayIcon>
+#include <QWheelEvent>
+#undef signals
+
 #include <assert.h>
 #include <glib/gstdio.h>
-#include <gtk/gtk.h>
 #include <libnotify/notify.h>
 #include <signal.h>
 #include <stdlib.h>
@@ -50,7 +54,7 @@
 static gboolean m_backend_is_setup = FALSE;
 static gchar *m_commandline_device_name = NULL;
 static NotifyNotification *m_notification = NULL;
-static GtkStatusIcon *m_status_icon = NULL;
+static QSystemTrayIcon *m_status_icon = NULL;
 
 // Backend Interface
 static gboolean (*backend_setup)(const gchar *card, const gchar *channel,
@@ -100,44 +104,30 @@ static void volume_icon_launch_helper()
 }
 
 // StatusIcon handlers
-static gboolean status_icon_on_button_press(GtkStatusIcon *status_icon,
-                                            GdkEventButton *event,
-                                            gpointer user_data)
+static void status_icon_on_activated(QSystemTrayIcon::ActivationReason reason)
 {
-	if(event->button == 1) {
+	if(reason == QSystemTrayIcon::Trigger) {
 		m_mute = !m_mute;
 		backend_set_volume(m_volume);
 		backend_set_mute(m_mute);
 		status_icon_update(m_mute, FALSE);
 		notification_show();
 	}
-	else if(event->button == 2) {
+	else if(reason == QSystemTrayIcon::MiddleClick) {
 		volume_icon_launch_helper();
 	}
-	else {
-		return FALSE;
-	}
-
-	return TRUE;
 }
 
-static void status_icon_on_scroll_event(GtkStatusIcon *status_icon,
-                                        GdkEventScroll *event,
-                                        gpointer user_data)
+static void status_icon_on_wheel_event(QWheelEvent *event)
 {
 	int stepsize = config_get_stepsize();
+	QPoint delta = event->angleDelta();
 
-	switch(event->direction) {
-	case(GDK_SCROLL_UP):
-	case(GDK_SCROLL_RIGHT):
+	if(delta.y() >= 120 || delta.x() <= -120) { // up/right
 		m_volume = clamp_volume(m_volume + stepsize);
-		break;
-	case(GDK_SCROLL_DOWN):
-	case(GDK_SCROLL_LEFT):
+	}
+	if(delta.y() <= -120 || delta.x() >= 120) { // down/left
 		m_volume = clamp_volume(m_volume - stepsize);
-		break;
-	default:
-		break;
 	}
 
 	backend_set_volume(m_volume);
@@ -191,7 +181,7 @@ static void status_icon_update(gboolean mute, gboolean ignore_cache)
 		else
 			icon_name = "audio-volume-high";
 
-		gtk_status_icon_set_from_icon_name(m_status_icon, icon_name);
+		m_status_icon->setIcon(QIcon::fromTheme(icon_name));
 
 		// Always use the current GTK icon theme for notifications.
 		notify_notification_update(m_notification, APPNAME, NULL, icon_name);
@@ -201,7 +191,7 @@ static void status_icon_update(gboolean mute, gboolean ignore_cache)
 	if((volume != volume_cache || ignore_cache) && backend_get_channel()) {
 		gchar buffer[32];
 		g_sprintf(buffer, "%s: %d%%", backend_get_channel(), volume);
-		gtk_status_icon_set_tooltip_text(m_status_icon, buffer);
+		m_status_icon->setToolTip(buffer);
 
 		notify_notification_set_hint_int32(m_notification, "value",
 		                                   (gint)volume);
@@ -209,15 +199,25 @@ static void status_icon_update(gboolean mute, gboolean ignore_cache)
 	}
 }
 
+class StatusIcon : public QSystemTrayIcon {
+  protected:
+	bool event(QEvent *e) override
+	{
+		if(e->type() == QEvent::Wheel) {
+			status_icon_on_wheel_event((QWheelEvent *)e);
+			return true;
+		}
+		return QSystemTrayIcon::event(e);
+	}
+};
+
 static void status_icon_setup(gboolean mute)
 {
-	m_status_icon = gtk_status_icon_new();
-	g_signal_connect(G_OBJECT(m_status_icon), "button_press_event",
-	                 G_CALLBACK(status_icon_on_button_press), NULL);
-	g_signal_connect(G_OBJECT(m_status_icon), "scroll_event",
-	                 G_CALLBACK(status_icon_on_scroll_event), NULL);
+	m_status_icon = new StatusIcon();
+	QObject::connect(m_status_icon, &QSystemTrayIcon::activated,
+	                 status_icon_on_activated);
 	status_icon_update(mute, FALSE);
-	gtk_status_icon_set_visible(m_status_icon, TRUE);
+	m_status_icon->show();
 }
 
 static void volume_icon_on_volume_changed(int volume, gboolean mute)
@@ -272,7 +272,6 @@ int main(int argc, char *argv[])
 	    {NULL}};
 	GOptionContext *context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
-	g_option_context_add_group(context, gtk_get_option_group(TRUE));
 	if(!g_option_context_parse(context, &argc, &argv, &error)) {
 		if(error) {
 			g_printerr("%s\n", error->message);
@@ -285,6 +284,8 @@ int main(int argc, char *argv[])
 		g_fprintf(stdout, "%s %s\n", APPNAME, VERSION);
 		return EXIT_SUCCESS;
 	}
+
+	new QApplication(argc, argv);
 
 	// Setup OSD Notification
 	if(notify_init(APPNAME)) {
@@ -329,7 +330,7 @@ int main(int argc, char *argv[])
 	status_icon_setup(m_mute);
 
 	// Main Loop
-	gtk_main();
+	qApp->exec();
 
 	g_object_unref(G_OBJECT(m_notification));
 	notify_uninit();

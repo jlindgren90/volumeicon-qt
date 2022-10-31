@@ -21,10 +21,10 @@
 // with this program.  If not, see <http://www.gnu.org/licenses/>.
 //##############################################################################
 
+#include <QApplication>
 #include <alsa/asoundlib.h>
 
 #include <glib.h>
-#include <gtk/gtk.h>
 #include <math.h>
 
 #include "alsa_backend.h"
@@ -70,7 +70,8 @@ static gboolean asound_poll_cb(GIOChannel *source, GIOCondition condition,
 	int retval = snd_mixer_handle_events(m_mixer);
 	if(retval < 0) {
 		fprintf(stderr, "snd_mixer_handle_events: %s\n", snd_strerror(retval));
-		gtk_main_quit();
+		QMetaObject::invokeMethod(qApp, &QApplication::quit,
+		                          Qt::QueuedConnection);
 		return FALSE;
 	}
 	return TRUE;

@@ -7,10 +7,15 @@ AM_INIT_AUTOMAKE
 AC_LANG([C++])
 AC_PROG_CXX
 
-# Check for gtk
-PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= 3.0])
-AC_SUBST(GTK_CFLAGS)
-AC_SUBST(GTK_LIBS)
+# Check for glib
+PKG_CHECK_MODULES([glib], [glib-2.0 >= 2.32.0])
+AC_SUBST(GLIB_CFLAGS)
+AC_SUBST(GLIB_LIBS)
+
+# Check for Qt
+PKG_CHECK_MODULES([QT], [Qt5Widgets >= 5.15.0])
+AC_SUBST(QT_CFLAGS)
+AC_SUBST(QT_LIBS)
 
 # Check for alsa
 PKG_CHECK_MODULES([ALSA], [alsa])
