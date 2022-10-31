@@ -28,7 +28,6 @@
 #include <math.h>
 
 #include "alsa_backend.h"
-#include "alsa_volume_mapping.h"
 #include "config.h"
 
 //##############################################################################
@@ -95,14 +94,10 @@ int asound_get_volume()
 	}
 
 	// Return the current volume value from [0-100]
-	if(config_get_use_logarithmic_scale()) {
-		long pmin, pmax, value;
-		snd_mixer_selem_get_playback_volume_range(m_elem, &pmin, &pmax);
-		snd_mixer_selem_get_playback_volume(m_elem, 0, &value);
-		return 100 * (value - pmin) / (pmax - pmin);
-	}
-	else
-		return rint(100 * get_normalized_playback_volume(m_elem, 0));
+	long pmin, pmax, value;
+	snd_mixer_selem_get_playback_volume_range(m_elem, &pmin, &pmax);
+	snd_mixer_selem_get_playback_volume(m_elem, 0, &value);
+	return 100 * (value - pmin) / (pmax - pmin);
 }
 
 gboolean asound_get_mute()
@@ -287,12 +282,8 @@ void asound_set_volume(int volume)
 	}
 	volume = (volume < 0 ? 0 : (volume > 100 ? 100 : volume));
 
-	if(config_get_use_logarithmic_scale()) {
-		long pmin, pmax;
-		snd_mixer_selem_get_playback_volume_range(m_elem, &pmin, &pmax);
-		long value = pmin + (pmax - pmin) * volume / 100;
-		snd_mixer_selem_set_playback_volume_all(m_elem, value);
-	}
-	else
-		set_normalized_playback_volume_all(m_elem, volume / 100.0, 0);
+	long pmin, pmax;
+	snd_mixer_selem_get_playback_volume_range(m_elem, &pmin, &pmax);
+	long value = pmin + (pmax - pmin) * volume / 100;
+	snd_mixer_selem_set_playback_volume_all(m_elem, value);
 }
