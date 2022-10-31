@@ -43,7 +43,7 @@
 // Definitions
 //##############################################################################
 // About
-#define APPNAME "Volume Icon"
+#define APPNAME "Volume Icon (Qt)"
 
 // Setup retry
 #define SETUP_RETRY_INTERVAL 1000
