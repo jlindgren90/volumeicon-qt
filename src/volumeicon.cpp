@@ -225,6 +225,7 @@ static void volume_icon_on_volume_changed(int volume, gboolean mute)
 	m_mute = mute;
 	m_volume = clamp_volume(volume);
 	status_icon_update(m_mute, FALSE);
+	notification_show();
 }
 
 static void notification_show()
