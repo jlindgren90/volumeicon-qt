@@ -44,8 +44,10 @@ po/*.gmo
 src/.deps
 
 # Miscellaneous
+config.guess
 config.log
 config.status
+config.sub
 configure
 *Makefile
 *Makefile.in
@@ -55,3 +57,7 @@ po/Makefile.in.in
 
 doc/volumeicon.1
 doc/volumeicon.5
+
+# makepkg
+pkg/
+*.pkg.tar.*
